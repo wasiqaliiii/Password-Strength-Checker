@@ -1,393 +1,240 @@
+
 import javax.swing.*;
+import javax.swing.border.*;
 import java.awt.*;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public class Main extends JFrame {
 
-    private JTextField passwordField;
-    private JTextField generatedPasswordField;
+    
+    private JTextField passwordField, generatedField;
     private JTextArea resultArea;
     private JProgressBar strengthBar;
     private JLabel strengthLabel;
-    private JButton themeButton;
-
     private boolean darkMode = true;
 
+    private static final Color DARK_BG = new Color(17,24,39);
+    private static final Color DARK_CARD = new Color(31,41,55);
+    private static final Color ACCENT = new Color(0,255,170);
+
     public Main() {
-        initializeUI();
-    }
-
-    private void initializeUI() {
-        setTitle("SecurePass Pro - Password Security Analyzer");
-        setSize(800, 600);
+        setTitle("SecurePass Pro");
+        setSize(900,650);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        JPanel main = new JPanel(new BorderLayout(15,15));
+        main.setBorder(new EmptyBorder(15,15,15,15));
 
-        JLabel title = new JLabel("SECUREPASS PRO", SwingConstants.CENTER);
-        title.setFont(new Font("Arial", Font.BOLD, 28));
+        JPanel header = new JPanel(new BorderLayout());
+        JLabel title = new JLabel("🔒 SECUREPASS PRO", SwingConstants.CENTER);
+        title.setFont(new Font("Segoe UI", Font.BOLD, 30));
+        JLabel sub = new JLabel("Cyber Security Password Analyzer", SwingConstants.CENTER);
+        sub.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        header.add(title, BorderLayout.CENTER);
+        header.add(sub, BorderLayout.SOUTH);
 
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        JPanel center = new JPanel();
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
 
-        JPanel passwordPanel = new JPanel(new FlowLayout());
+        passwordField = new JTextField(25);
+        generatedField = new JTextField(25);
+        generatedField.setEditable(false);
 
-        JLabel passwordLabel = new JLabel("Enter Password:");
-        passwordField = new JTextField(20);
+        JButton analyzeBtn = createButton("Analyze Password");
+        JButton generateBtn = createButton("Generate Password");
+        JButton themeBtn = createButton("Switch Theme");
 
-        JButton analyzeButton = new JButton("Analyze");
+        JPanel passPanel = cardPanel();
+        passPanel.add(new JLabel("Password:"));
+        passPanel.add(passwordField);
+        passPanel.add(analyzeBtn);
 
-        passwordPanel.add(passwordLabel);
-        passwordPanel.add(passwordField);
-        passwordPanel.add(analyzeButton);
-
-        JPanel meterPanel = new JPanel(new BorderLayout());
-
-        strengthLabel = new JLabel("Strength: ");
-        strengthBar = new JProgressBar(0, 100);
+        strengthLabel = new JLabel("Strength: -");
+        strengthBar = new JProgressBar(0,100);
         strengthBar.setStringPainted(true);
 
-        meterPanel.add(strengthLabel, BorderLayout.NORTH);
-        meterPanel.add(strengthBar, BorderLayout.CENTER);
+        JPanel meter = cardPanel();
+        meter.setLayout(new BorderLayout(10,10));
+        meter.add(strengthLabel, BorderLayout.NORTH);
+        meter.add(strengthBar, BorderLayout.CENTER);
 
-        resultArea = new JTextArea(12, 40);
+        resultArea = new JTextArea(12,50);
         resultArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(resultArea);
+        resultArea.setFont(new Font("Consolas", Font.PLAIN, 14));
 
-        JPanel generatorPanel = new JPanel(new FlowLayout());
+        JPanel report = cardPanel();
+        report.setLayout(new BorderLayout());
+        report.add(new JScrollPane(resultArea));
 
-        generatedPasswordField = new JTextField(20);
-        generatedPasswordField.setEditable(false);
+        JPanel generator = cardPanel();
+        generator.add(generatedField);
+        generator.add(generateBtn);
 
-        JButton generateButton = new JButton("Generate Password");
+        JPanel bottom = new JPanel();
+        bottom.add(themeBtn);
 
-        generatorPanel.add(generatedPasswordField);
-        generatorPanel.add(generateButton);
+        center.add(passPanel);
+        center.add(Box.createVerticalStrut(10));
+        center.add(meter);
+        center.add(Box.createVerticalStrut(10));
+        center.add(report);
+        center.add(Box.createVerticalStrut(10));
+        center.add(generator);
 
-        themeButton = new JButton("Switch Theme");
+        main.add(header, BorderLayout.NORTH);
+        main.add(center, BorderLayout.CENTER);
+        main.add(bottom, BorderLayout.SOUTH);
+        add(main);
 
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.add(themeButton);
-
-        centerPanel.add(passwordPanel);
-        centerPanel.add(Box.createVerticalStrut(15));
-        centerPanel.add(meterPanel);
-        centerPanel.add(Box.createVerticalStrut(15));
-        centerPanel.add(scrollPane);
-        centerPanel.add(Box.createVerticalStrut(15));
-        centerPanel.add(generatorPanel);
-
-        mainPanel.add(title, BorderLayout.NORTH);
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
-
-        add(mainPanel);
-
-        analyzeButton.addActionListener(e -> analyzePassword());
-
-        generateButton.addActionListener(e -> {
-            PasswordGenerator generator = new PasswordGenerator();
-            generatedPasswordField.setText(generator.generatePassword(12));
+        analyzeBtn.addActionListener(e -> analyze());
+        generateBtn.addActionListener(e -> generatedField.setText(new PasswordGenerator().generatePassword(12)));
+        themeBtn.addActionListener(e -> {
+            darkMode = !darkMode;
+            applyTheme(main);
         });
 
-        themeButton.addActionListener(e -> toggleTheme());
-
-        applyDarkTheme(mainPanel);
+        applyTheme(main);
     }
 
-    private void analyzePassword() {
+    private JPanel cardPanel() {
+        JPanel p = new JPanel(new FlowLayout());
+        p.setBorder(new CompoundBorder(new LineBorder(ACCENT,1), new EmptyBorder(10,10,10,10)));
+        return p;
+    }
 
-        String password = passwordField.getText();
+    private JButton createButton(String text){
+        JButton b = new JButton(text);
+        b.setFocusPainted(false);
+        return b;
+    }
 
-        if (password.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Please enter a password.");
+    private void analyze() {
+        String pwd = passwordField.getText().trim();
+        if(pwd.isEmpty()){
+            JOptionPane.showMessageDialog(this,"Enter a password");
             return;
         }
 
-        PasswordAnalyzer analyzer = new PasswordAnalyzer();
-        SecurityReport report = analyzer.analyze(password);
+        SecurityReport report = new PasswordAnalyzer().analyze(pwd);
 
         strengthBar.setValue(report.getScore());
-        strengthLabel.setText("Strength: " + report.getStrength());
+        strengthBar.setString(report.getScore()+"%");
 
+        if(report.getScore() < 40){
+            strengthBar.setForeground(Color.RED);
+        }else if(report.getScore() < 80){
+            strengthBar.setForeground(Color.ORANGE);
+        }else{
+            strengthBar.setForeground(Color.GREEN);
+        }
+
+        strengthLabel.setText("Strength: " + report.getStrength());
         resultArea.setText(report.toString());
     }
 
-    private void toggleTheme() {
-
-        Container content = getContentPane();
-
-        if (darkMode) {
-            applyLightTheme(content);
-        } else {
-            applyDarkTheme(content);
-        }
-
-        darkMode = !darkMode;
-        SwingUtilities.updateComponentTreeUI(this);
+    private void applyTheme(Container c){
+        Color bg = darkMode ? DARK_BG : Color.WHITE;
+        Color fg = darkMode ? Color.WHITE : Color.BLACK;
+        apply(c,bg,fg);
+        repaint();
     }
 
-    private void applyDarkTheme(Container container) {
-        setColors(container,
-                new Color(30, 30, 30),
-                Color.WHITE);
-    }
-
-    private void applyLightTheme(Container container) {
-        setColors(container,
-                Color.WHITE,
-                Color.BLACK);
-    }
-
-    private void setColors(Container container,
-                           Color background,
-                           Color foreground) {
-
-        container.setBackground(background);
-        container.setForeground(foreground);
-
-        for (Component component : container.getComponents()) {
-
-            component.setBackground(background);
-            component.setForeground(foreground);
-
-            if (component instanceof Container) {
-                setColors((Container) component,
-                        background,
-                        foreground);
-            }
+    private void apply(Container c, Color bg, Color fg){
+        c.setBackground(bg);
+        c.setForeground(fg);
+        for(Component comp : c.getComponents()){
+            comp.setBackground(comp instanceof JTextField || comp instanceof JTextArea ? (darkMode?DARK_CARD:Color.WHITE):bg);
+            comp.setForeground(fg);
+            if(comp instanceof Container) apply((Container)comp,bg,fg);
         }
     }
 
     public static void main(String[] args) {
-
-        SwingUtilities.invokeLater(() -> {
-            new Main().setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> new Main().setVisible(true));
     }
 }
 
 class Password {
-
     private final String value;
-
-    public Password(String value) {
-        this.value = value;
-    }
-
-    public String getValue() {
-        return value;
-    }
+    public Password(String value){ this.value = value; }
+    public String getValue(){ return value; }
 }
 
 class SecurityReport {
-
     private final int score;
     private final String strength;
     private final String details;
 
-    public SecurityReport(int score,
-                          String strength,
-                          String details) {
+    public SecurityReport(int score, String strength, String details){
         this.score = score;
         this.strength = strength;
         this.details = details;
     }
 
-    public int getScore() {
-        return score;
-    }
+    public int getScore(){ return score; }
+    public String getStrength(){ return strength; }
 
-    public String getStrength() {
-        return strength;
-    }
-
-    @Override
-    public String toString() {
-
-        return "Security Score: "
-                + score
-                + "/100\n\n"
-                + "Strength Level: "
-                + strength
-                + "\n\n"
-                + details;
+    public String toString(){
+        return "Score: " + score + "/100\n\nStrength: " + strength + "\n\n" + details;
     }
 }
 
 class SecurityTool {
-
-    public String getToolName() {
-        return "Security Tool";
-    }
+    public String getToolName(){ return "Security Tool"; }
 }
 
 class PasswordAnalyzer extends SecurityTool {
 
-    private static final Set<String> COMMON_PASSWORDS =
-            new HashSet<>();
+    private static final Set<String> COMMON = new HashSet<>(Arrays.asList(
+            "password","123456","admin","qwerty","welcome"
+    ));
 
-    static {
+    public SecurityReport analyze(String text){
 
-        COMMON_PASSWORDS.add("password");
-        COMMON_PASSWORDS.add("123456");
-        COMMON_PASSWORDS.add("admin");
-        COMMON_PASSWORDS.add("qwerty");
-        COMMON_PASSWORDS.add("welcome");
-    }
-
-    public SecurityReport analyze(String passwordText) {
-
-        Password password = new Password(passwordText);
-
+        Password p = new Password(text);
         int score = 0;
+        StringBuilder sb = new StringBuilder();
 
-        StringBuilder recommendations =
-                new StringBuilder();
+        if(p.getValue().length() >= 8) score += 20;
+        else sb.append("• Use at least 8 characters\n");
 
-        if (password.getValue().length() >= 8) {
-            score += 20;
-        } else {
-            recommendations.append(
-                    "• Use at least 8 characters\n");
+        if(p.getValue().matches(".*[A-Z].*")) score += 20;
+        else sb.append("• Add uppercase letters\n");
+
+        if(p.getValue().matches(".*[a-z].*")) score += 20;
+        else sb.append("• Add lowercase letters\n");
+
+        if(p.getValue().matches(".*\\d.*")) score += 20;
+        else sb.append("• Add numbers\n");
+
+        if(p.getValue().matches(".*[^a-zA-Z0-9].*")) score += 20;
+        else sb.append("• Add special symbols\n");
+
+        if(COMMON.contains(p.getValue().toLowerCase())){
+            score = Math.max(0, score - 40);
+            sb.append("• Common password detected\n");
         }
 
-        if (containsUppercase(password.getValue())) {
-            score += 20;
-        } else {
-            recommendations.append(
-                    "• Add uppercase letters\n");
-        }
+        String strength = score < 40 ? "WEAK" : score < 80 ? "MEDIUM" : "STRONG";
 
-        if (containsLowercase(password.getValue())) {
-            score += 20;
-        } else {
-            recommendations.append(
-                    "• Add lowercase letters\n");
-        }
+        if(sb.length()==0) sb.append("Excellent password. No recommendations.");
 
-        if (containsDigit(password.getValue())) {
-            score += 20;
-        } else {
-            recommendations.append(
-                    "• Add numbers\n");
-        }
-
-        if (containsSpecialCharacter(password.getValue())) {
-            score += 20;
-        } else {
-            recommendations.append(
-                    "• Add special symbols\n");
-        }
-
-        if (COMMON_PASSWORDS.contains(
-                password.getValue().toLowerCase())) {
-
-            score = Math.max(score - 40, 0);
-
-            recommendations.append(
-                    "\n⚠ Common Password Detected\n");
-        }
-
-        String strength;
-
-        if (score < 40) {
-            strength = "WEAK";
-        } else if (score < 80) {
-            strength = "MEDIUM";
-        } else {
-            strength = "STRONG";
-        }
-
-        if (recommendations.length() == 0) {
-            recommendations.append(
-                    "Excellent Password!\nNo recommendations.");
-        }
-
-        return new SecurityReport(
-                score,
-                strength,
-                recommendations.toString());
-    }
-
-    private boolean containsUppercase(String text) {
-
-        for (char c : text.toCharArray()) {
-            if (Character.isUpperCase(c)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean containsLowercase(String text) {
-
-        for (char c : text.toCharArray()) {
-            if (Character.isLowerCase(c)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean containsDigit(String text) {
-
-        for (char c : text.toCharArray()) {
-            if (Character.isDigit(c)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean containsSpecialCharacter(String text) {
-
-        for (char c : text.toCharArray()) {
-
-            if (!Character.isLetterOrDigit(c)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    @Override
-    public String getToolName() {
-        return "Password Analyzer";
+        return new SecurityReport(score, strength, sb.toString());
     }
 }
 
 class PasswordGenerator {
 
-    private static final String CHARACTERS =
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                    + "abcdefghijklmnopqrstuvwxyz"
-                    + "0123456789"
-                    + "!@#$%^&*()";
+    private static final String CHARS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
 
-    private final Random random = new Random();
-
-    public String generatePassword(int length) {
-
-        StringBuilder password =
-                new StringBuilder();
-
-        for (int i = 0; i < length; i++) {
-
-            password.append(
-                    CHARACTERS.charAt(
-                            random.nextInt(
-                                    CHARACTERS.length())));
+    public String generatePassword(int length){
+        Random r = new Random();
+        StringBuilder sb = new StringBuilder();
+        for(int i=0;i<length;i++){
+            sb.append(CHARS.charAt(r.nextInt(CHARS.length())));
         }
-
-        return password.toString();
+        return sb.toString();
     }
 }
